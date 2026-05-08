@@ -1,5 +1,5 @@
-use crate::ocean::phillips_ocean;
-use std::slice;
+use crate::ocean::{phillips_ocean, phillips_ocean_wgpu};
+use std::{panic, slice};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_phillips_spectrum(
@@ -59,6 +59,17 @@ pub unsafe extern "C" fn rust_build_phillips_ocean_components(
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_init_phillips_ocean_wgpu() -> i32 {
+    match panic::catch_unwind(phillips_ocean_wgpu::init) {
+        Ok(Ok(())) => 0,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::NoAdapter)) => -11,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::RequestDeviceFailed)) => -12,
+        Ok(Err(_)) => -13,
+        Err(_) => -17,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_compute_phillips_ocean_wave(
@@ -90,19 +101,31 @@ pub unsafe extern "C" fn rust_compute_phillips_ocean_wave(
     let amp = unsafe { slice::from_raw_parts(amp, component_count) };
     let phase0 = unsafe { slice::from_raw_parts(phase0, component_count) };
 
-    match phillips_ocean::compute_wave(
-        frame,
-        phase_base,
-        omega,
-        amp,
-        phase0,
-        frame_count,
-        component_count,
-        time,
-    ) {
-        Ok(()) => 0,
-        Err(phillips_ocean::ComputeWaveError::InvalidFrameCount) => -2,
-        Err(phillips_ocean::ComputeWaveError::InvalidComponentCount) => -3,
-        Err(phillips_ocean::ComputeWaveError::BufferTooSmall) => -4,
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        phillips_ocean_wgpu::compute_wave(
+            frame,
+            phase_base,
+            omega,
+            amp,
+            phase0,
+            frame_count,
+            component_count,
+            time,
+        )
+    }));
+
+    match result {
+        Ok(Ok(())) => 0,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::NotInitialized)) => -10,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::NoAdapter)) => -11,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::RequestDeviceFailed)) => -12,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::InvalidFrameCount)) => -2,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::InvalidComponentCount)) => -3,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::BufferTooSmall)) => -4,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::MapFailed)) => -14,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::PollFailed)) => -15,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::ReadbackFailed)) => -16,
+        Ok(Err(phillips_ocean_wgpu::WgpuError::AlreadyInitialized)) => -13,
+        Err(_) => -17,
     }
 }

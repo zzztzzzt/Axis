@@ -70,7 +70,24 @@ function _check_compute_wave_status(status::Cint)
     status == -2 && error("frame_count must be positive.")
     status == -3 && error("component_count must be positive.")
     status == -4 && error("one or more wave buffers are too small.")
+    status == -10 && error("Phillips ocean wgpu backend is not initialized. Call init!() first.")
+    status == -11 && error("Phillips ocean wgpu backend could not find a compatible GPU adapter.")
+    status == -12 && error("Phillips ocean wgpu backend failed to create a GPU device.")
+    status == -13 && error("Phillips ocean wgpu backend failed to initialize.")
+    status == -14 && error("Phillips ocean wgpu readback mapping failed.")
+    status == -15 && error("Phillips ocean wgpu device polling failed.")
+    status == -16 && error("Phillips ocean wgpu readback failed.")
+    status == -17 && error("Phillips ocean wgpu backend panicked during compute.")
     error("Rust compute_wave failed with status $status.")
+end
+
+function _check_wgpu_init_status(status::Cint)
+    status == 0 && return nothing
+    status == -11 && error("Phillips ocean wgpu backend could not find a compatible GPU adapter.")
+    status == -12 && error("Phillips ocean wgpu backend failed to create a GPU device.")
+    status == -13 && error("Phillips ocean wgpu backend failed to initialize.")
+    status == -17 && error("Phillips ocean wgpu backend panicked during initialization.")
+    error("Phillips ocean wgpu backend failed with status $status.")
 end
 
 """
@@ -210,6 +227,8 @@ end
 function init!()
     build_components!()
     precompute_phase!()
+    status = ccall(_axis_rs_symbol(:rust_init_phillips_ocean_wgpu), Cint, ())
+    _check_wgpu_init_status(status)
     return nothing
 end
 
