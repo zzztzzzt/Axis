@@ -1,0 +1,80 @@
+#=
+Julia -> Rust type mapping for @rust_fn codegen.
+Used by codegen.jl to generate FFI-compatible Rust signatures.
+=#
+
+# Precompilation-safe method-based registries
+function register_rust_fn end
+function register_rust_code end
+
+const _JULIA_TO_RUST_TYPE = Dict{Any, String}(
+    :Float32  => "f32",
+    :Float64  => "f64",
+    :Int32    => "i32",
+    :Int64    => "i64",
+    :UInt8    => "u8",
+    :UInt16   => "u16",
+    :UInt32   => "u32",
+    :UInt64   => "u64",
+    :Bool     => "bool",
+    :Cvoid    => "()",
+    :Csize_t  => "usize",
+    :Cint     => "i32",
+    :Cfloat   => "f32",
+    :Cdouble  => "f64",
+)
+
+"""
+    _jl_to_rust(t) -> String
+
+Convert a Julia type AST node (Symbol or Expr) to its Rust FFI equivalent.
+Raises an error for unmapped types.
+
+Examples:
+  :Float32          -> "f32"
+  :(Ptr{Float32})   -> "*mut f32"
+  :(Ptr{UInt8})     -> "*mut u8"
+"""
+function _jl_to_rust(t)::String
+    if t isa Symbol
+        r = get(_JULIA_TO_RUST_TYPE, t, nothing)
+        r !== nothing && return r
+        error("Axis @rust_fn: no Rust mapping for Julia type `$t`. " *
+              "Add it to _JULIA_TO_RUST_TYPE in types.jl, or file a PR.")
+    end
+
+    if t isa Expr && t.head == :curly && t.args[1] == :Ptr
+        inner = _jl_to_rust(t.args[2])
+        return "*mut $inner"
+    end
+
+    error("Axis @rust_fn: unsupported type expression `$t`. " *
+          "Only plain types and Ptr{T} are supported in FFI signatures.")
+end
+
+"""
+    _rust_fn_name(jl_name::Symbol) -> String
+
+Sanitize a Julia function name into a valid Rust identifier:
+  - strips trailing `!`
+  - leaves leading `_` intact
+"""
+function _rust_fn_name(jl_name::Symbol)::String
+    s = string(jl_name)
+    endswith(s, "!") && (s = s[1:end-1])
+    return s
+end
+
+"""
+    _jl_filename_to_rust_mod(filepath::String) -> String
+
+Convert a Julia source file path to a Rust snake_case module name.
+  "PhillipsOceanAX.jl"  ->  "phillips_ocean_ax"
+  "MySimHelper.jl"      ->  "my_sim_helper"
+"""
+function _jl_filename_to_rust_mod(filepath::String)::String
+    base = splitext(basename(filepath))[1] # "PhillipsOceanAX"
+    # Insert underscore before each uppercase letter that follows a lowercase
+    snake = replace(base, r"([a-z0-9])([A-Z])" => s"\1_\2")
+    return lowercase(snake) # "phillips_ocean_ax"
+end

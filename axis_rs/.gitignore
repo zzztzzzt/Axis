@@ -1,3 +1,6 @@
+# code that auto-gen by Axis
+src/generated/*
+
 # target
 /target/
 
