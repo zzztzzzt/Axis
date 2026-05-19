@@ -5,7 +5,7 @@
 
 <br>
 
-<img src="https://github.com/zzztzzzt/Fomalhaut.jl/blob/main/logo/logo.png" alt="axis-logo" style="height: 280px; width: auto;" />
+<img src="https://github.com/SakuraAxis/Axis/blob/main/logo/logo.png" alt="axis-logo" style="height: 280px; width: auto;" />
 
 ### Axis - Lightweight Julia-Rust FFI bridge + WGPU compute dispatcher.
 
