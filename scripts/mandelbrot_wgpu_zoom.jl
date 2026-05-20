@@ -5,6 +5,21 @@ Pkg.activate(ROOT)
 
 import Axis as AX
 
+@AX.rust_code """
+use std::io::{self, Write};
+
+const MANDELBROT_ASCII_RAMP: &[u8] = b" .:-=+*#%@";
+
+fn mandelbrot_ascii_char(n: u32, max_iter: u32) -> char {
+    if n >= max_iter {
+        ' '
+    } else {
+        let idx = ((n as usize) * (MANDELBROT_ASCII_RAMP.len() - 1)) / (max_iter.max(1) as usize);
+        MANDELBROT_ASCII_RAMP[idx] as char
+    }
+}
+"""
+
 @AX.rust_fn function axis_print_mandelbrot_ascii(
     pixels::Ptr{UInt32},
     width::UInt32,
@@ -12,27 +27,18 @@ import Axis as AX
     max_iter::UInt32
 )::Cvoid
     """
-    use std::io::{self, Write};
-
     if pixels.is_null() || width == 0 || height == 0 {
         return;
     }
 
     let pixels = unsafe { std::slice::from_raw_parts(pixels, (width as usize) * (height as usize)) };
-    let ramp = b" .:-=+*#%@";
     let mut out = String::with_capacity(((width + 1) * height + 16) as usize);
 
     out.push_str("\\x1b[2J\\x1b[H");
     for y in 0..height as usize {
         for x in 0..width as usize {
             let n = pixels[y * width as usize + x];
-            let ch = if n >= max_iter {
-                b' '
-            } else {
-                let idx = ((n as usize) * (ramp.len() - 1)) / (max_iter.max(1) as usize);
-                ramp[idx]
-            };
-            out.push(ch as char);
+            out.push(mandelbrot_ascii_char(n, max_iter));
         }
         out.push('\\n');
     }
