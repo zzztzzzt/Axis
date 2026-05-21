@@ -20,7 +20,7 @@ IMPORTANT : This project is still in the development and testing stages, licensi
 
 Axis uses wgpu to call GPU on Rust side for computing. wgpu licensed under the MIT License & Apache-2.0 License.
 
-## Test Axis
+## Try Example Code
 
 ### Start Test Script ( Mandelbrot Zoom )
 
