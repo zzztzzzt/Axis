@@ -46,7 +46,7 @@ fn unpack_rgb(packed: u32) -> (u32, u32, u32) {
 
             let _ = write!(
                 out,
-                "\\x1b[38;2;{};{};{}m\\x1b[48;2;{};{};{}m▀",
+                "\\x1b[38;2;{};{};{}m\\x1b[48;2;{};{};{}m\\u{2580}",
                 tr, tg, tb, br, bg, bb
             );
         }
