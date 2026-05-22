@@ -151,6 +151,97 @@ call Foreign Function :
 )
 ```
 
+### AX.wgpu_init!
+
+Initialise the WGPU device and compute dispatcher. Safe to call multiple times.
+
+```julia
+AX.wgpu_init!()
+```
+
+### AX.wgpu_create_buffer!
+
+Create a GPU buffer with a user-defined integer ID, byte size, and binding type.
+
+```julia
+AX.wgpu_create_buffer!(1, sizeof(input), AX.BINDING_STORAGE_READ)
+AX.wgpu_create_buffer!(2, sizeof(output), AX.BINDING_STORAGE_READ_WRITE)
+```
+
+binding types :
+
+- `AX.BINDING_STORAGE_READ` : read-only storage buffer
+- `AX.BINDING_STORAGE_READ_WRITE` : read-write storage buffer, supports readback
+- `AX.BINDING_UNIFORM` : uniform buffer
+
+### AX.wgpu_write_buffer!
+
+Write a Julia `Array` or `Vector` into an existing GPU buffer.
+
+```julia
+AX.wgpu_write_buffer!(1, input)
+```
+
+### AX.wgpu_read_buffer!
+
+Read data from a GPU buffer into a pre-allocated Julia `Array` or `Vector`.
+
+```julia
+AX.wgpu_read_buffer!(2, output)
+```
+
+### AX.wgpu_destroy_buffer!
+
+Destroy a GPU buffer and release its GPU-side resources.
+
+```julia
+AX.wgpu_destroy_buffer!(1)
+```
+
+### AX.wgpu_create_compute_pipeline!
+
+Compile WGSL source and register it as a compute pipeline with a user-defined integer ID.
+
+```julia
+AX.wgpu_create_compute_pipeline!(
+    100,
+    WGSL_SOURCE,
+    "main",
+    UInt32[AX.BINDING_STORAGE_READ, AX.BINDING_STORAGE_READ_WRITE],
+)
+```
+
+### AX.wgpu_bind_buffers!
+
+Bind buffers to a pipeline. The buffer order must match WGSL `@binding(n)` order.
+
+```julia
+AX.wgpu_bind_buffers!(100, [1, 2])
+```
+
+### AX.wgpu_dispatch!
+
+Run the compute pipeline with the selected workgroup counts.
+
+```julia
+AX.wgpu_dispatch!(100; wg_x=cld(length(output), 64))
+```
+
+### AX.wgpu_destroy_pipeline!
+
+Destroy a compute pipeline and release its GPU-side resources.
+
+```julia
+AX.wgpu_destroy_pipeline!(100)
+```
+
+notes :
+
+- buffer and pipeline IDs are user-defined integers, keep them unique.
+- call `AX.bridge_up(...)` before using WGPU APIs when the Rust bridge needs to be generated or rebuilt.
+- use `try ... finally` for cleanup in longer scripts.
+- see `scripts/mandelbrot_wgpu_zoom.jl` for a complete runnable example.
+
 ## Project Dependencies Details
 
 wgpu License : [https://github.com/gfx-rs/wgpu/blob/trunk/LICENSE.MIT](https://github.com/gfx-rs/wgpu/blob/trunk/LICENSE.MIT) and [another Apache-2.0 License](https://github.com/gfx-rs/wgpu/blob/trunk/LICENSE.APACHE)
